@@ -1,4 +1,62 @@
+//! Provides a wrapper around a [`Write`](std::io::Write)/[`Read`](std::io::Read) object and a
+//! [`StreamPrimitive`](aead::stream::StreamPrimitive) to provide an easy interface for doing
+//! correct encryption.
+//!
+//! ```
+//! # use aead_io::{DecryptBE32BufReader, EncryptBE32BufWriter};
+//! # use aead::stream::{Nonce, StreamBE32};
+//! # use aead::NewAead;
+//! # use chacha20poly1305::{ChaCha20Poly1305, Key};
+//! # use std::io::{Read, Write, Result};
+//! #
+//! # fn main() -> Result<()> {
+//! let key = b"my very super super secret key!!".into();
+//! let plaintext = b"hello world!";
+//!
+//! let ciphertext = {
+//!     let mut ciphertext = Vec::default();
+//!     let mut writer = EncryptBE32BufWriter::<ChaCha20Poly1305, _, _>::new(
+//!         key,
+//!         &Default::default(), // please use a better nonce ;)
+//!         Vec::with_capacity(128),
+//!         &mut ciphertext,
+//!     )
+//!     .unwrap();
+//!     writer.write_all(plaintext)?;
+//!     writer.flush()?;
+//!     ciphertext
+//! };
+//!
+//! let decrypted = {
+//!     let mut reader = DecryptBE32BufReader::<ChaCha20Poly1305, _, _>::new(
+//!         key,
+//!         Vec::with_capacity(256),
+//!         ciphertext.as_slice(),
+//!     )
+//!     .unwrap();
+//!     let mut out = Vec::new();
+//!     let _ = reader.read_to_end(&mut out).unwrap();
+//!     out
+//! };
+//!
+//! assert_eq!(decrypted, plaintext);
+//! #
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! # `no_std`
+//!
+//! This package is compatible with `no_std` environments. Just disable the default features, and
+//! implement the [`Buffer`](aead::Buffer), [`CappedBuffer`](CappedBuffer),
+//! [`ResizeBuffer`](ResizeBuffer), [`Write`](Write) and
+//! [`Read`](Read) accordingly. There should be some default implementations for `Vec<u8>`
+//! and slices if `alloc` is enabled but it is currently incomplete.
+
 #![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 mod buffer;
 mod error;

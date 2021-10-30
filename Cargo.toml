@@ -6,7 +6,8 @@ resolver = "2"
 
 [features]
 default = ["std"]
-std = ["aead/alloc"]
+std = ["alloc"]
+alloc = ["aead/alloc"]
 
 [dependencies]
 aead = { version = "0.4.3", default-features = false, features = ["stream"] }
