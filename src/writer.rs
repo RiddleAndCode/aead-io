@@ -157,3 +157,32 @@ where
         Ok(self.flush()?)
     }
 }
+
+#[cfg(not(feature = "std"))]
+impl<A, B, W, S> Write for EncryptBufWriter<A, B, W, S>
+where
+    A: AeadInPlace,
+    B: CappedBuffer,
+    W: Write,
+    S: StreamPrimitive<A>,
+    A::NonceSize: Sub<S::NonceOverhead>,
+    NonceSize<A, S>: ArrayLength<u8>,
+{
+    type Error = Error<W::Error>;
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        Ok(self.write(buf)?)
+    }
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(self.flush()?)
+    }
+    fn write_all(&mut self, mut buf: &[u8]) -> Result<(), Self::Error> {
+        while !buf.is_empty() {
+            match self.write(buf) {
+                Ok(0) => return Err(Error::Aead),
+                Ok(n) => buf = &buf[n..],
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(())
+    }
+}

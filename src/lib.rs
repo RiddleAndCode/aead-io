@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 mod buffer;
 mod error;
 mod reader;
@@ -19,6 +21,7 @@ pub type EncryptLE31BufWriter<A, B, W> = EncryptBufWriter<A, B, W, StreamLE31<A>
 pub type DecryptBE32BufReader<A, B, W> = DecryptBufReader<A, B, W, StreamBE32<A>>;
 pub type DecryptLE31BufReader<A, B, W> = DecryptBufReader<A, B, W, StreamLE31<A>>;
 
+#[cfg(feature = "std")]
 #[cfg(test)]
 mod tests {
     use super::*;

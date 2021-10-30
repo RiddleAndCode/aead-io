@@ -135,7 +135,7 @@ where
         self.reader
     }
 
-    pub fn read_chunk_size(&mut self) -> Result<(), Error<R::Error>> {
+    fn read_chunk_size(&mut self) -> Result<(), Error<R::Error>> {
         let mut bytes_to_read = [0u8; 4];
         let mut offset = 0;
         while offset < 4 {
@@ -159,7 +159,7 @@ where
         }
     }
 
-    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error<R::Error>> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error<R::Error>> {
         if self.decryptor.is_uninit() {
             let mut nonce = Nonce::<A, S>::default();
             self.reader.read_exact(&mut nonce)?;
@@ -222,5 +222,38 @@ where
 {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         Ok(self.read(buf)?)
+    }
+}
+
+#[cfg(not(feature = "std"))]
+impl<A, B, R, S> Read for DecryptBufReader<A, B, R, S>
+where
+    A: AeadInPlace + NewAead,
+    B: ResizeBuffer + CappedBuffer,
+    R: Read,
+    S: StreamPrimitive<A> + NewStream<A>,
+    A::NonceSize: Sub<S::NonceOverhead>,
+    NonceSize<A, S>: ArrayLength<u8>,
+{
+    type Error = Error<R::Error>;
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        Ok(self.read(buf)?)
+    }
+    fn read_exact(&mut self, mut buf: &mut [u8]) -> Result<(), Self::Error> {
+        while !buf.is_empty() {
+            match self.read(buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let tmp = buf;
+                    buf = &mut tmp[n..];
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        if !buf.is_empty() {
+            Err(Error::Aead)
+        } else {
+            Ok(())
+        }
     }
 }
