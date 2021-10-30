@@ -2,6 +2,15 @@
 name = "aead-io"
 version = "0.1.0"
 edition = "2018"
+authors = ["Julian Popescu <jpopesculian@gmail.com>"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/riddleandcode/aead-io"
+documentation = "https://docs.rs/aead-io/"
+repository = "https://github.com/riddleandcode/aead-io"
+description = "A wrapper around Write/Read interfaces with AEAD"
+keywords = ["aead", "io", "encryption", "decryption", "cryptography"]
+categories = ["cryptography", "no-std"]
 resolver = "2"
 
 [features]
