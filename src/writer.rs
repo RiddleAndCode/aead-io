@@ -6,6 +6,9 @@ use aead::stream::{Encryptor, NewStream, Nonce, NonceSize, StreamPrimitive};
 use aead::{AeadInPlace, Key, NewAead};
 use core::ops::Sub;
 
+/// A wrapper around a [`Write`](Write) object and a [`StreamPrimitive`](`StreamPrimitive`)
+/// providing a [`Write`](Write) interface which automatically encrypts the underlying stream when
+/// writing
 pub struct EncryptBufWriter<A, B, W, S>
 where
     A: AeadInPlace,
@@ -32,6 +35,7 @@ where
     A::NonceSize: Sub<S::NonceOverhead>,
     NonceSize<A, S>: ArrayLength<u8>,
 {
+    /// Constructs a new Writer using an AEAD key, buffer and reader
     pub fn new(
         key: &Key<A>,
         nonce: &Nonce<A, S>,
@@ -58,6 +62,7 @@ where
         }
     }
 
+    /// Constructs a new Writer using an AEAD primitive, buffer and reader
     pub fn from_aead(
         aead: A,
         nonce: &Nonce<A, S>,
@@ -84,10 +89,12 @@ where
         }
     }
 
+    /// Gets a reference to the inner writer
     pub fn inner(&self) -> &W {
         &self.writer
     }
 
+    /// Consumes the Writer and returns the inner writer
     pub fn into_inner(self) -> W {
         self.writer
     }

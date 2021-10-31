@@ -5,7 +5,6 @@ Provides a wrapper around a [`Write`](std::io::Write)/[`Read`](std::io::Read) ob
 correct encryption.
 
 ```rust
-#
 let key = b"my very super super secret key!!".into();
 let plaintext = b"hello world!";
 
@@ -45,4 +44,6 @@ This package is compatible with `no_std` environments. Just disable the default 
 implement the [`Buffer`](aead::Buffer), [`CappedBuffer`](CappedBuffer),
 [`ResizeBuffer`](ResizeBuffer), [`Write`](Write) and
 [`Read`](Read) accordingly. There should be some default implementations for `Vec<u8>`
-and slices if `alloc` is enabled but it is currently incomplete.
+and byte slices
+
+License: MIT OR Apache-2.0

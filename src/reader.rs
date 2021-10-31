@@ -67,6 +67,9 @@ where
     }
 }
 
+/// A wrapper around a [`Read`](Read) object and a [`StreamPrimitive`](`StreamPrimitive`)
+/// providing a [`Read`](Read) interface which automatically decrypts the underlying stream when
+/// reading
 pub struct DecryptBufReader<A, B, R, S>
 where
     A: AeadInPlace + NewAead,
@@ -93,6 +96,7 @@ where
     A::NonceSize: Sub<S::NonceOverhead>,
     NonceSize<A, S>: ArrayLength<u8>,
 {
+    /// Constructs a new Reader using an AEAD key, buffer and reader
     pub fn new(key: &Key<A>, mut buffer: B, reader: R) -> Result<Self, InvalidCapacity> {
         buffer.truncate(0);
         let capacity = buffer.capacity().min(u32::MAX as usize);
@@ -110,6 +114,7 @@ where
         }
     }
 
+    /// Constructs a new Reader using an AEAD primitive, buffer and reader
     pub fn from_aead(aead: A, mut buffer: B, reader: R) -> Result<Self, InvalidCapacity> {
         buffer.truncate(0);
         let capacity = buffer.capacity().min(u32::MAX as usize);
@@ -127,10 +132,12 @@ where
         }
     }
 
+    /// Gets a reference to the inner reader
     pub fn inner(&self) -> &R {
         &self.reader
     }
 
+    /// Consumes the Reader and returns the inner reader
     pub fn into_inner(self) -> R {
         self.reader
     }
