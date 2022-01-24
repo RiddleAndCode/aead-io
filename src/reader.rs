@@ -30,17 +30,14 @@ where
     }
     fn init(&mut self, nonce: &Nonce<A, S>) -> Result<(), aead::Error> {
         match core::mem::replace(self, Self::Empty) {
-            Self::Uninit(aead) => *self = Self::Decryptor(Decryptor::from_aead(aead, &nonce)),
+            Self::Uninit(aead) => *self = Self::Decryptor(Decryptor::from_aead(aead, nonce)),
             Self::Decryptor(decryptor) => *self = Self::Decryptor(decryptor),
             Self::Empty => return Err(aead::Error),
         }
         Ok(())
     }
     fn is_uninit(&self) -> bool {
-        match self {
-            Self::Uninit(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Uninit(_))
     }
     fn as_mut(&mut self) -> Option<&mut Decryptor<A, S>> {
         match self {
@@ -156,7 +153,7 @@ where
         }
         let bytes_to_read = u32::from_be_bytes(bytes_to_read) as usize;
         if bytes_to_read > self.capacity {
-            return Err(Error::Aead);
+            Err(Error::Aead)
         } else {
             self.bytes_to_read = bytes_to_read;
             Ok(())
@@ -184,13 +181,13 @@ where
             if self.bytes_to_read == 0 {
                 self.decryptor
                     .take()
-                    .ok_or_else(|| Error::Aead)?
+                    .ok_or(Error::Aead)?
                     .decrypt_last_in_place(&[], &mut self.buffer)
                     .map_err(|_| Error::Aead)?;
             } else {
                 self.decryptor
                     .as_mut()
-                    .ok_or_else(|| Error::Aead)?
+                    .ok_or(Error::Aead)?
                     .decrypt_next_in_place(&[], &mut self.buffer)
                     .map_err(|_| Error::Aead)?;
             }
