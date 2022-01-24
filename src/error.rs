@@ -48,7 +48,7 @@ where
     fn from(err: Error<Io>) -> Self {
         match err {
             Error::Aead => std::io::Error::new(std::io::ErrorKind::Other, "an AEAD error occured"),
-            err => err.into(),
+            Error::Io(err) => err.into(),
         }
     }
 }
