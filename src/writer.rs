@@ -12,8 +12,6 @@ use core::ops::Sub;
 pub struct EncryptBufWriter<A, B, W, S>
 where
     A: AeadInPlace,
-    B: CappedBuffer,
-    W: Write,
     S: StreamPrimitive<A>,
     A::NonceSize: Sub<S::NonceOverhead>,
     NonceSize<A, S>: ArrayLength<u8>,
@@ -30,7 +28,6 @@ impl<A, B, W, S> EncryptBufWriter<A, B, W, S>
 where
     A: AeadInPlace,
     B: CappedBuffer,
-    W: Write,
     S: StreamPrimitive<A>,
     A::NonceSize: Sub<S::NonceOverhead>,
     NonceSize<A, S>: ArrayLength<u8>,
@@ -102,7 +99,17 @@ where
     fn capacity_remaining(&self) -> usize {
         self.capacity - self.buffer.len()
     }
+}
 
+impl<A, B, W, S> EncryptBufWriter<A, B, W, S>
+where
+    A: AeadInPlace,
+    B: CappedBuffer,
+    W: Write,
+    S: StreamPrimitive<A>,
+    A::NonceSize: Sub<S::NonceOverhead>,
+    NonceSize<A, S>: ArrayLength<u8>,
+{
     fn flush_buffer(&mut self, last: bool) -> Result<(), Error<W::Error>> {
         if last {
             self.encryptor
