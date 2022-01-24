@@ -114,18 +114,18 @@ where
         if last {
             self.encryptor
                 .take()
-                .ok_or_else(|| Error::Aead)?
+                .ok_or(Error::Aead)?
                 .encrypt_last_in_place(&[], &mut self.buffer)
                 .map_err(|_| Error::Aead)?;
         } else {
             self.encryptor
                 .as_mut()
-                .ok_or_else(|| Error::Aead)?
+                .ok_or(Error::Aead)?
                 .encrypt_next_in_place(&[], &mut self.buffer)
                 .map_err(|_| Error::Aead)?;
         }
         if self.first_block {
-            self.writer.write_all(&self.nonce.as_slice())?;
+            self.writer.write_all(self.nonce.as_slice())?;
             self.first_block = false;
         }
         self.writer
