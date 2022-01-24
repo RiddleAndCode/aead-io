@@ -68,8 +68,8 @@ pub enum IoError {
 impl core::fmt::Display for IoError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            UnexpectedEof => f.write_str("Failed to fill whole buffer"),
-            UnexpectedWriteZero => f.write_str("Failed to write whole buffer"),
+            IoError::UnexpectedEof => f.write_str("Failed to fill whole buffer"),
+            IoError::WriteZero => f.write_str("Failed to write whole buffer"),
         }
     }
 }
