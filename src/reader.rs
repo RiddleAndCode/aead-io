@@ -29,12 +29,9 @@ where
         Self::Uninit(aead)
     }
     fn init(&mut self, nonce: &Nonce<A, S>) -> Result<(), aead::Error> {
-        match self {
-            Self::Uninit(aead) => {
-                let aead = unsafe { core::mem::replace(aead, core::mem::zeroed()) };
-                *self = Self::Decryptor(Decryptor::from_aead(aead, &nonce))
-            }
-            Self::Decryptor(_) => {}
+        match core::mem::replace(self, Self::Empty) {
+            Self::Uninit(aead) => *self = Self::Decryptor(Decryptor::from_aead(aead, &nonce)),
+            Self::Decryptor(decryptor) => *self = Self::Decryptor(decryptor),
             Self::Empty => return Err(aead::Error),
         }
         Ok(())
@@ -52,16 +49,9 @@ where
         }
     }
     fn take(&mut self) -> Option<Decryptor<A, S>> {
-        match self {
-            Self::Decryptor(decryptor) => {
-                let decryptor = unsafe { core::mem::replace(decryptor, core::mem::zeroed()) };
-                *self = Self::Empty;
-                Some(decryptor)
-            }
-            Self::Uninit(_) => {
-                *self = Self::Empty;
-                None
-            }
+        match core::mem::replace(self, Self::Empty) {
+            Self::Decryptor(decryptor) => Some(decryptor),
+            Self::Uninit(_) => None,
             Self::Empty => None,
         }
     }
