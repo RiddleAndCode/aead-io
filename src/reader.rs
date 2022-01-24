@@ -63,8 +63,6 @@ where
 pub struct DecryptBufReader<A, B, R, S>
 where
     A: AeadInPlace + NewAead,
-    B: ResizeBuffer + CappedBuffer,
-    R: Read,
     S: StreamPrimitive<A> + NewStream<A>,
     A::NonceSize: Sub<S::NonceOverhead>,
     NonceSize<A, S>: ArrayLength<u8>,
@@ -81,7 +79,6 @@ impl<A, B, R, S> DecryptBufReader<A, B, R, S>
 where
     A: AeadInPlace + NewAead,
     B: ResizeBuffer + CappedBuffer,
-    R: Read,
     S: StreamPrimitive<A> + NewStream<A>,
     A::NonceSize: Sub<S::NonceOverhead>,
     NonceSize<A, S>: ArrayLength<u8>,
@@ -131,7 +128,17 @@ where
     pub fn into_inner(self) -> R {
         self.reader
     }
+}
 
+impl<A, B, R, S> DecryptBufReader<A, B, R, S>
+where
+    A: AeadInPlace + NewAead,
+    B: ResizeBuffer + CappedBuffer,
+    R: Read,
+    S: StreamPrimitive<A> + NewStream<A>,
+    A::NonceSize: Sub<S::NonceOverhead>,
+    NonceSize<A, S>: ArrayLength<u8>,
+{
     fn read_chunk_size(&mut self) -> Result<(), Error<R::Error>> {
         let mut bytes_to_read = [0u8; 4];
         let mut offset = 0;
