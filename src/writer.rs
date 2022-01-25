@@ -5,7 +5,7 @@ use aead::generic_array::ArrayLength;
 use aead::stream::{Encryptor, NewStream, Nonce, NonceSize, StreamPrimitive};
 use aead::{AeadInPlace, Key, NewAead};
 use core::ops::Sub;
-use core::ptr;
+use core::{mem, ptr};
 
 #[derive(Clone, Copy)]
 enum State {
@@ -106,7 +106,8 @@ where
     pub fn into_inner(mut self) -> Result<W, IntoInnerError<Self, W::Error>> {
         match self.flush_buffer(true) {
             Ok(()) => {
-                let inner = unsafe { ptr::read(&mut self.writer) };
+                let inner = unsafe { ptr::read(&self.writer) };
+                mem::forget(self);
                 Ok(inner)
             }
             Err(err) => Err(IntoInnerError::new(self, err)),
