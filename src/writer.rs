@@ -1,10 +1,18 @@
 use crate::buffer::CappedBuffer;
-use crate::error::{Error, InvalidCapacity};
+use crate::error::{Error, IntoInnerError, InvalidCapacity};
 use crate::rw::Write;
 use aead::generic_array::ArrayLength;
 use aead::stream::{Encryptor, NewStream, Nonce, NonceSize, StreamPrimitive};
 use aead::{AeadInPlace, Key, NewAead};
 use core::ops::Sub;
+use core::{mem, ptr};
+
+#[derive(Clone, Copy)]
+enum State {
+    Init,
+    Writing,
+    Finished,
+}
 
 /// A wrapper around a [`Write`](Write) object and a [`StreamPrimitive`](`StreamPrimitive`)
 /// providing a [`Write`](Write) interface which automatically encrypts the underlying stream when
@@ -12,6 +20,8 @@ use core::ops::Sub;
 pub struct EncryptBufWriter<A, B, W, S>
 where
     A: AeadInPlace,
+    B: CappedBuffer,
+    W: Write,
     S: StreamPrimitive<A>,
     A::NonceSize: Sub<S::NonceOverhead>,
     NonceSize<A, S>: ArrayLength<u8>,
@@ -21,13 +31,14 @@ where
     buffer: B,
     writer: W,
     capacity: usize,
-    first_block: bool,
+    state: State,
 }
 
 impl<A, B, W, S> EncryptBufWriter<A, B, W, S>
 where
     A: AeadInPlace,
     B: CappedBuffer,
+    W: Write,
     S: StreamPrimitive<A>,
     A::NonceSize: Sub<S::NonceOverhead>,
     NonceSize<A, S>: ArrayLength<u8>,
@@ -54,7 +65,7 @@ where
                 writer,
                 buffer,
                 capacity,
-                first_block: true,
+                state: State::Init,
             })
         }
     }
@@ -81,7 +92,7 @@ where
                 writer,
                 buffer,
                 capacity,
-                first_block: true,
+                state: State::Init,
             })
         }
     }
@@ -92,25 +103,26 @@ where
     }
 
     /// Consumes the Writer and returns the inner writer
-    pub fn into_inner(self) -> W {
-        self.writer
+    pub fn into_inner(mut self) -> Result<W, IntoInnerError<Self, W::Error>> {
+        match self.flush_buffer(true) {
+            Ok(()) => {
+                let inner = unsafe { ptr::read(&self.writer) };
+                mem::forget(self);
+                Ok(inner)
+            }
+            Err(err) => Err(IntoInnerError::new(self, err)),
+        }
     }
 
     fn capacity_remaining(&self) -> usize {
         self.capacity - self.buffer.len()
     }
-}
 
-impl<A, B, W, S> EncryptBufWriter<A, B, W, S>
-where
-    A: AeadInPlace,
-    B: CappedBuffer,
-    W: Write,
-    S: StreamPrimitive<A>,
-    A::NonceSize: Sub<S::NonceOverhead>,
-    NonceSize<A, S>: ArrayLength<u8>,
-{
     fn flush_buffer(&mut self, last: bool) -> Result<(), Error<W::Error>> {
+        if matches!(self.state, State::Finished) {
+            return Ok(());
+        }
+
         if last {
             self.encryptor
                 .take()
@@ -124,18 +136,27 @@ where
                 .encrypt_next_in_place(&[], &mut self.buffer)
                 .map_err(|_| Error::Aead)?;
         }
-        if self.first_block {
+
+        if matches!(self.state, State::Init) {
             self.writer.write_all(self.nonce.as_slice())?;
-            self.first_block = false;
+            self.state = State::Writing;
         }
+
         self.writer
             .write_all(&(self.buffer.len() as u32).to_be_bytes())?;
         self.writer.write_all(self.buffer.as_ref())?;
+        if last {
+            self.state = State::Finished;
+        }
+
         self.buffer.truncate(0);
         Ok(())
     }
 
     fn write(&mut self, buf: &[u8]) -> Result<usize, Error<W::Error>> {
+        if matches!(self.state, State::Finished) {
+            return Err(Error::Aead);
+        }
         if buf.len() > self.capacity_remaining() {
             self.flush_buffer(false)?;
         }
@@ -150,6 +171,20 @@ where
         self.flush_buffer(true)?;
         self.writer.flush()?;
         Ok(())
+    }
+}
+
+impl<A, B, W, S> Drop for EncryptBufWriter<A, B, W, S>
+where
+    A: AeadInPlace,
+    B: CappedBuffer,
+    W: Write,
+    S: StreamPrimitive<A>,
+    A::NonceSize: Sub<S::NonceOverhead>,
+    NonceSize<A, S>: ArrayLength<u8>,
+{
+    fn drop(&mut self) {
+        let _ = self.flush_buffer(true);
     }
 }
 

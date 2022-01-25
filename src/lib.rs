@@ -12,8 +12,8 @@
 //! let key = b"my very super super secret key!!".into();
 //! let plaintext = b"hello world!";
 //!
-//! let ciphertext = {
-//!     let mut ciphertext = Vec::default();
+//! let mut ciphertext = Vec::default();
+//! {
 //!     let mut writer = EncryptBE32BufWriter::<ChaCha20Poly1305, _, _>::new(
 //!         key,
 //!         &Default::default(), // please use a better nonce ;)
@@ -23,19 +23,17 @@
 //!     .unwrap();
 //!     writer.write_all(plaintext)?;
 //!     writer.flush()?;
-//!     ciphertext
 //! };
 //!
-//! let decrypted = {
+//! let mut decrypted = Vec::new();
+//! {
 //!     let mut reader = DecryptBE32BufReader::<ChaCha20Poly1305, _, _>::new(
 //!         key,
 //!         Vec::with_capacity(256),
 //!         ciphertext.as_slice(),
 //!     )
 //!     .unwrap();
-//!     let mut out = Vec::new();
-//!     let _ = reader.read_to_end(&mut out).unwrap();
-//!     out
+//!     let _ = reader.read_to_end(&mut decrypted).unwrap();
 //! };
 //!
 //! assert_eq!(decrypted, plaintext);
@@ -66,7 +64,7 @@ mod writer;
 pub use aead;
 
 pub use buffer::{CappedBuffer, ResizeBuffer};
-pub use error::{Error, InvalidCapacity};
+pub use error::{Error, IntoInnerError, InvalidCapacity};
 pub use reader::DecryptBufReader;
 pub use rw::{Read, Write};
 pub use writer::EncryptBufWriter;
