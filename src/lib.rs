@@ -22,6 +22,7 @@
 //!     )
 //!     .unwrap();
 //!     writer.write_all(plaintext)?;
+//!     writer.flush()?;
 //! };
 //!
 //! let mut decrypted = Vec::new();
