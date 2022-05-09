@@ -4,7 +4,7 @@ use crate::rw::Write;
 use aead::generic_array::typenum::Unsigned;
 use aead::generic_array::ArrayLength;
 use aead::stream::{Encryptor, NewStream, Nonce, NonceSize, StreamPrimitive};
-use aead::{AeadInPlace, Key, NewAead};
+use aead::{AeadCore, AeadInPlace, Key, NewAead};
 use core::ops::Sub;
 use core::{mem, ptr};
 
@@ -94,7 +94,7 @@ where
         let capacity = buffer
             .capacity()
             .min(u32::MAX as usize)
-            .checked_sub(<NonceSize<A, S> as Unsigned>::to_usize())
+            .checked_sub(<<A as AeadCore>::TagSize as Unsigned>::to_usize())
             .ok_or(InvalidCapacity)?;
         if capacity < 1 {
             Err(InvalidCapacity)
