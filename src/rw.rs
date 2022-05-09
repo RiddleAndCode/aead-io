@@ -18,15 +18,15 @@ where
     type Error = std::io::Error;
     #[inline]
     fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
-        self.write(buf)
+        std::io::Write::write(self, buf)
     }
     #[inline]
     fn flush(&mut self) -> Result<(), Self::Error> {
-        self.flush()
+        std::io::Write::flush(self)
     }
     #[inline]
     fn write_all(&mut self, buf: &[u8]) -> Result<(), Self::Error> {
-        self.write_all(buf)
+        std::io::Write::write_all(self, buf)
     }
 }
 

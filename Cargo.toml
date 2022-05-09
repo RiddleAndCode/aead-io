@@ -14,12 +14,14 @@ categories = ["cryptography", "no-std"]
 resolver = "2"
 
 [features]
-default = ["std"]
-std = ["alloc"]
+default = ["std", "array-buffer"]
+std = ["alloc", "aead/std", "arrayvec/std"]
 alloc = ["aead/alloc"]
+array-buffer = ["arrayvec"]
 
 [dependencies]
 aead = { version = "0.4.3", default-features = false, features = ["stream"] }
+arrayvec = { version = "0.7.2", optional = true, default-features = false }
 
 [dev-dependencies]
 aead = { version = "0.4.3", default-features = false, features = ["alloc"] }
