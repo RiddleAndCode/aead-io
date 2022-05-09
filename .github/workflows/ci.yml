@@ -63,7 +63,7 @@ jobs:
         with:
           command: install
           args: cargo-no-std-check
-      - run: cargo-no-std-check --no-default-features
+      - run: cargo-no-std-check --no-default-features --features array-buffer
         env:
           RUSTFLAGS: -D warnings
 

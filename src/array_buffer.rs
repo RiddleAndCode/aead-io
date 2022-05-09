@@ -101,7 +101,7 @@ impl<const CAP: usize> crate::rw::Write for ArrayBuffer<CAP> {
     type Error = IoError;
     #[inline]
     fn write(&mut self, data: &[u8]) -> Result<usize, Self::Error> {
-        let amt = std::cmp::min(data.len(), self.0.remaining_capacity());
+        let amt = core::cmp::min(data.len(), self.0.remaining_capacity());
         self.0.try_extend_from_slice(&data[..amt]).unwrap();
         Ok(amt)
     }
