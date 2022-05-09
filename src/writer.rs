@@ -1,9 +1,10 @@
 use crate::buffer::CappedBuffer;
 use crate::error::{Error, IntoInnerError, InvalidCapacity};
 use crate::rw::Write;
+use aead::generic_array::typenum::Unsigned;
 use aead::generic_array::ArrayLength;
 use aead::stream::{Encryptor, NewStream, Nonce, NonceSize, StreamPrimitive};
-use aead::{AeadInPlace, Key, NewAead};
+use aead::{AeadCore, AeadInPlace, Key, NewAead};
 use core::ops::Sub;
 use core::{mem, ptr};
 
@@ -55,19 +56,15 @@ where
         S: NewStream<A>,
     {
         buffer.truncate(0);
-        let capacity = buffer.capacity().min(u32::MAX as usize);
-        if capacity < 1 {
-            Err(InvalidCapacity)
-        } else {
-            Ok(Self {
-                encryptor: Some(Encryptor::new(key, nonce)),
-                nonce: nonce.clone(),
-                writer,
-                buffer,
-                capacity,
-                state: State::Init,
-            })
-        }
+        let capacity = Self::capacity_for_buffer(&buffer)?;
+        Ok(Self {
+            encryptor: Some(Encryptor::new(key, nonce)),
+            nonce: nonce.clone(),
+            writer,
+            buffer,
+            capacity,
+            state: State::Init,
+        })
     }
 
     /// Constructs a new Writer using an AEAD primitive, buffer and reader
@@ -82,18 +79,27 @@ where
         S: NewStream<A>,
     {
         buffer.truncate(0);
-        let capacity = buffer.capacity().min(u32::MAX as usize);
+        let capacity = Self::capacity_for_buffer(&buffer)?;
+        Ok(Self {
+            encryptor: Some(Encryptor::from_aead(aead, nonce)),
+            nonce: nonce.clone(),
+            writer,
+            buffer,
+            capacity,
+            state: State::Init,
+        })
+    }
+
+    fn capacity_for_buffer(buffer: &B) -> Result<usize, InvalidCapacity> {
+        let capacity = buffer
+            .capacity()
+            .min(u32::MAX as usize)
+            .checked_sub(<<A as AeadCore>::TagSize as Unsigned>::to_usize())
+            .ok_or(InvalidCapacity)?;
         if capacity < 1 {
             Err(InvalidCapacity)
         } else {
-            Ok(Self {
-                encryptor: Some(Encryptor::from_aead(aead, nonce)),
-                nonce: nonce.clone(),
-                writer,
-                buffer,
-                capacity,
-                state: State::Init,
-            })
+            Ok(capacity)
         }
     }
 

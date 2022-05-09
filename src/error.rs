@@ -14,6 +14,13 @@ impl fmt::Display for InvalidCapacity {
 #[cfg(feature = "std")]
 impl std::error::Error for InvalidCapacity {}
 
+#[cfg(feature = "std")]
+impl From<InvalidCapacity> for std::io::Error {
+    fn from(err: InvalidCapacity) -> Self {
+        std::io::Error::new(std::io::ErrorKind::OutOfMemory, err)
+    }
+}
+
 /// An error for read/write operations with custom Error types. Mainly useful for `no_std`
 /// environments
 #[derive(Debug, Clone)]

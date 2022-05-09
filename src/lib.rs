@@ -3,7 +3,7 @@
 //! correct encryption.
 //!
 //! ```
-//! # use aead_io::{DecryptBE32BufReader, EncryptBE32BufWriter};
+//! # use aead_io::{DecryptBE32BufReader, EncryptBE32BufWriter, ArrayBuffer};
 //! # use aead::stream::{Nonce, StreamBE32};
 //! # use aead::NewAead;
 //! # use chacha20poly1305::{ChaCha20Poly1305, Key};
@@ -17,7 +17,7 @@
 //!     let mut writer = EncryptBE32BufWriter::<ChaCha20Poly1305, _, _>::new(
 //!         key,
 //!         &Default::default(), // please use a better nonce ;)
-//!         Vec::with_capacity(128),
+//!         ArrayBuffer::<128>::new(),
 //!         &mut ciphertext,
 //!     )
 //!     .unwrap();
@@ -29,7 +29,7 @@
 //! {
 //!     let mut reader = DecryptBE32BufReader::<ChaCha20Poly1305, _, _>::new(
 //!         key,
-//!         Vec::with_capacity(256),
+//!         ArrayBuffer::<256>::new(),
 //!         ciphertext.as_slice(),
 //!     )
 //!     .unwrap();
@@ -42,19 +42,23 @@
 //! # }
 //! ```
 //!
-//! # `no_std`
+//! # `no_std`, `array-buffer`
 //!
-//! This package is compatible with `no_std` environments. Just disable the default features, and
-//! implement the [`Buffer`](aead::Buffer), [`CappedBuffer`](CappedBuffer),
+//! This package is compatible with `no_std` environments. Just disable the default features! The
+//! std `Vec`, `io::Read` and `io::Write` interfaces are reimplemented internally via
+//! the [`Buffer`](aead::Buffer), [`CappedBuffer`](CappedBuffer),
 //! [`ResizeBuffer`](ResizeBuffer), [`Write`](Write) and
-//! [`Read`](Read) accordingly. There should be some default implementations for `Vec<u8>`
-//! and byte slices
+//! [`Read`](Read) traits accordingly. There should be some default implementations
+//! for `Vec<u8>`, byte slices and a no alloc compatible [`ArrayBuffer`](ArrayBuffer)
+//! if the `array-buffer` feature is enabled
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
+#[cfg(feature = "array-buffer")]
+mod array_buffer;
 mod buffer;
 mod error;
 mod reader;
@@ -63,6 +67,8 @@ mod writer;
 
 pub use aead;
 
+#[cfg(feature = "array-buffer")]
+pub use array_buffer::ArrayBuffer;
 pub use buffer::{CappedBuffer, ResizeBuffer};
 pub use error::{Error, IntoInnerError, InvalidCapacity};
 pub use reader::DecryptBufReader;
@@ -110,7 +116,7 @@ mod tests {
         let mut writer = EncryptBufWriter::<A, _, _, S>::from_aead(
             aead.clone(),
             &nonce,
-            Vec::with_capacity(128),
+            ArrayBuffer::<128>::new(),
             &mut blob,
         )
         .unwrap();
@@ -119,8 +125,8 @@ mod tests {
         drop(writer);
 
         let mut reader = DecryptBufReader::<A, _, _, S>::from_aead(
-            aead.clone(),
-            Vec::with_capacity(256),
+            aead,
+            ArrayBuffer::<256>::new(),
             blob.as_slice(),
         )
         .unwrap();
